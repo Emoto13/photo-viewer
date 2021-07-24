@@ -18,8 +18,13 @@ jobs:
       with:
         go-version: 1.16
 
-    - name: Install gorc
-      run: go get github.com/stretchr/gorc
+    - name: Setup auth-service
+      run: cd auth-service && go build . && cd tests/ && go test .
+
+    - name: Setup follow-service
+      run: cd ../../follow-service && go build . && cd tests/ && go test .
     
-    - name: Run test
-      run: gorc
+    - name: Setup image-service
+      run: cd ../../follow-service && go build . && cd tests/ && go test .
+
+
