@@ -25,6 +25,16 @@ jobs:
       run: cd ../../follow-service && go build . && cd tests/ && go test .
     
     - name: Setup image-service
-      run: cd ../../follow-service && go build . && cd tests/ && go test .
+      run: cd ../../image-service && go build . && cd tests/ && go test .
+    
+    - name: Setup post-service
+      run: cd ../../post-service && go build . && cd tests/ && go test .
+    
+    - name: Setup user-service
+      run: cd ../../user-service && go build . && cd tests/ && go test .
+
+
+
+
 
 

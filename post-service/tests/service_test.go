@@ -1,1 +1,1 @@
-package integration
+package tests
