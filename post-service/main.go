@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
@@ -22,14 +23,20 @@ import (
 )
 
 var (
-	host         = os.Getenv("POSTGRE_HOST")
-	port         = os.Getenv("POSTGRE_PORT")
-	dbuser       = os.Getenv("POSTGRE_USER")
-	password     = os.Getenv("POSTGRE_PASSWORD")
-	dbname       = os.Getenv("POSTGRE_DB_NAME")
-	serverPort   = os.Getenv("POST_SERVICE_PORT")
-	redisPort    = os.Getenv("REDIS_PORT")
-	fullHostname = os.Getenv("FULL_HOSTNAME")
+	host                = os.Getenv("POSTGRE_HOST")
+	port                = os.Getenv("POSTGRE_PORT")
+	dbuser              = os.Getenv("POSTGRE_USER")
+	password            = os.Getenv("POSTGRE_PASSWORD")
+	dbname              = os.Getenv("POSTGRE_DB_NAME")
+	serverPort          = os.Getenv("POST_SERVICE_PORT")
+	redisPort           = os.Getenv("REDIS_PORT")
+	fullHostname        = os.Getenv("FULL_HOSTNAME")
+	redisDatabaseNumber = os.Getenv("REDIS_POST_DATABASE_NUMBER")
+	redisAddress        = os.Getenv("REDIS_ADDRESS")
+	redisPassword       = os.Getenv("REDIS_PASSWORD")
+	etcdAddress         = os.Getenv("ETCD_ADDRESS")
+	etcdUsername        = os.Getenv("ETCD_USERNAME")
+	etcdPassword        = os.Getenv("ETCD_PASSWORD")
 )
 
 func main() {
@@ -92,10 +99,30 @@ func newCacheDatabase() *cache.Cache {
 	return redisCache
 }
 
+func createRedisClient() *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     redisAddress,
+		Password: redisPassword,
+		DB:       getRedisDatabaseNumber(),
+	})
+
+	return rdb
+}
+
+func getRedisDatabaseNumber() int {
+	val, err := strconv.Atoi(redisDatabaseNumber)
+	if err != nil {
+		return 0
+	}
+	return val
+}
+
 func registerService() {
 	config := clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
-		DialTimeout: 5 * time.Second,
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
 	}
 
 	client, err := clientv3.New(config)
@@ -106,7 +133,7 @@ func registerService() {
 	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	_, err = client.Put(ctx, "post-service", fullHostname+serverPort)
+	_, err = client.Put(ctx, "post-service", fullHostname)
 	cancel()
 	if err != nil {
 		fmt.Println("put failed, err:", err)
@@ -116,8 +143,10 @@ func registerService() {
 
 func getAuthServiceAddress() string {
 	config := clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
-		DialTimeout: 5 * time.Second,
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
 	}
 
 	client, err := clientv3.New(config)
