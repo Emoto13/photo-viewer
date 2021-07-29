@@ -17,30 +17,34 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.16
-        
-    - name: printenv
-      run: printenv
-    
-    - name: random
-      run: echo $POSTGRE_HOST
   
-    - name: Deploy auth-service
-      run: cd auth-service && sh deploy.sh
+    - name: Run auth-service tests
+      env:
+        POSTGRE_HOST: ${{ secrets.POSTGRE_HOST }}
+        POSTGRE_PORT: ${{ secrets.POSTGRE_PORT }}
+        POSTGRE_USER: ${{ secrets.POSTGRE_USER }}
+        POSTGRE_PASSWORD: ${{ secrets.POSTGRE_PASSWORD }}
+        POSTGRE_TEST_DB_NAME: ${{ secrets.POSTGRE_TEST_DB_NAME }}
+        REDIS_TOKEN_TEST_DATABASE: ${{ secrets.REDIS_TOKEN_TEST_DATABASE }}
+        REDIS_ADDRESS: ${{ secrets.REDIS_ADDRESS }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      run: cd auth-service/tests && go test .
+      
 
-    - name: Deploy follow-service
-      run: cd follow-service && sh deploy.sh
+    - name: Run follow-service tests
+      env:
+        POSTGRE_HOST: ${{ secrets.POSTGRE_HOST }}
+        POSTGRE_PORT: ${{ secrets.POSTGRE_PORT }}
+        POSTGRE_USER: ${{ secrets.POSTGRE_USER }}
+        POSTGRE_PASSWORD: ${{ secrets.POSTGRE_PASSWORD }}
+        POSTGRE_TEST_DB_NAME: ${{ secrets.POSTGRE_TEST_DB_NAME }}
+      run: cd follow-service/tests && go test .
+      
+    - name: Run image-service tests
+      run: cd image-service/tests && go test .
     
-    - name: Deploy image-service
-      run: cd image-service && sh deploy.sh
+    - name: Run post-service tests
+      run: cd post-service/tests && go test .
     
-    - name: Deploy post-service
-      run: cd post-service && sh deploy.sh
-    
-    - name: Deploy user-service
-      run: cd user-service && sh deploy.sh
-
-
-
-
-
-
+    - name: Run user-service tests
+      run: cd user-service/tests && go test .
