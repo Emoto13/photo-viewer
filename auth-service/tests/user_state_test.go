@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Emoto13/photo-viewer-rest/auth-service/src/user"
@@ -24,7 +25,8 @@ func TestUserRetrieval(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		retrievedUser, _ := state.RetrieveUser(test.input)
+		retrievedUser, err := state.RetrieveUser(test.input)
+		fmt.Println(err)
 		assertEquals(retrievedUser.Username, test.expected.Username, test.message)
 	}
 

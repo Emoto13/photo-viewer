@@ -36,6 +36,7 @@ func TestSaveFollow(t *testing.T) {
 		err := followStore.SaveFollow(test.input)
 		assertEqualsError(err, test.expected, test.message)
 	}
+
 	db.Exec(setup.DropUsersTable)
 	db.Exec(setup.DropFollowersTable)
 }

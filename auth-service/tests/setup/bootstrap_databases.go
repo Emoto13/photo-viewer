@@ -23,7 +23,7 @@ var (
 )
 
 func OpenPostgresDatabaseConnection() (*sql.DB, error) {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
+	psqlInfo := fmt.Sprintf("sslmode=disable host=%s port=%s user=%s "+
 		"password=%s dbname=%s",
 		posgre_host, port, dbuser, password, test_dbname)
 
