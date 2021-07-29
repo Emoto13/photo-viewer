@@ -26,6 +26,7 @@ func New(authClient auth.AuthClient, imageStore image_store.ImageStore) *imageSe
 func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 	username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
+		fmt.Println("Failed to authenticate")
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -34,6 +35,7 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 	fileName := r.FormValue("fileName")
 	image, _, _ := r.FormFile("image")
 	defer image.Close()
+	fmt.Println(imageName, fileName)
 
 	buf := bytes.NewBuffer(nil)
 	if _, err := io.Copy(buf, image); err != nil {
@@ -41,7 +43,6 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(imageName, fileName)
 	err = s.imageStore.UploadImage(&image_data.UploadImage{
 		Name:     imageName,
 		FileName: fileName,
@@ -50,11 +51,12 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("failed to upload: ", err)
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	fmt.Println("Image ", imageName, " was successfully uploaded")
 	respondWithJSON(w, http.StatusOK, map[string]string{"Status": "success"})
 	return
 }

@@ -30,6 +30,9 @@ var (
 	serverPort   = os.Getenv("IMAGE_SERVICE_PORT")
 	awsS3Region  = os.Getenv("AWS_S3_REGION")
 	fullHostname = os.Getenv("FULL_HOSTNAME")
+	etcdAddress  = os.Getenv("ETCD_ADDRESS")
+	etcdUsername = os.Getenv("ETCD_USERNAME")
+	etcdPassword = os.Getenv("ETCD_PASSWORD")
 )
 
 func main() {
@@ -85,8 +88,10 @@ func OpenDatabaseConnection() (*sql.DB, error) {
 
 func registerService() {
 	config := clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
-		DialTimeout: 5 * time.Second,
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
 	}
 
 	client, err := clientv3.New(config)
@@ -97,7 +102,7 @@ func registerService() {
 	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	_, err = client.Put(ctx, "image-service", fullHostname+serverPort)
+	_, err = client.Put(ctx, "image-service", fullHostname)
 	cancel()
 	if err != nil {
 		fmt.Println("put failed, err:", err)
@@ -107,8 +112,10 @@ func registerService() {
 
 func getAuthServiceAddress() string {
 	config := clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
-		DialTimeout: 5 * time.Second,
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
 	}
 
 	client, err := clientv3.New(config)
