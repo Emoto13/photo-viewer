@@ -18,7 +18,8 @@ var (
 	password            = os.Getenv("POSTGRE_PASSWORD")
 	test_dbname         = os.Getenv("POSTGRE_TEST_DB_NAME")
 	redisDatabaseNumber = os.Getenv("REDIS_TOKEN_TEST_DATABASE")
-	redisAddress        = os.Getenv("HOSTNAME") + os.Getenv("REDIS_PORT")
+	redisAddress        = os.Getenv("REDIS_ADDRESS")
+	redisPassword       = os.Getenv("REDIS_PASSWORD")
 )
 
 func OpenPostgresDatabaseConnection() (*sql.DB, error) {

@@ -85,7 +85,7 @@ func (service *AuthServer) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (service *AuthServer) Authenticate(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Authenticating", r)
+	fmt.Println("Authenticating", r.Header.Get("Authorization"))
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		respondWithError(w, http.StatusBadRequest, "Invalid authorization header")

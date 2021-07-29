@@ -28,9 +28,13 @@ var (
 	password            = os.Getenv("POSTGRE_PASSWORD")
 	dbname              = os.Getenv("POSTGRE_DB_NAME")
 	serverPort          = os.Getenv("AUTH_SERVICE_PORT")
-	fullHostname        = os.Getenv("FULL_HOSTNAME")
-	redisDatabaseNumber = os.Getenv("REDIS_TOKEN_DATABASE")
-	redisAddress        = os.Getenv("HOSTNAME") + os.Getenv("REDIS_PORT")
+	fullHostname        = os.Getenv("FULL_HOSTNAME") // + ":10000"
+	redisDatabaseNumber = os.Getenv("REDIS_TOKEN_DATABASE_NUMBER")
+	redisAddress        = os.Getenv("REDIS_ADDRESS")
+	redisPassword       = os.Getenv("REDIS_PASSWORD")
+	etcdAddress         = os.Getenv("ETCD_ADDRESS")
+	etcdUsername        = os.Getenv("ETCD_USERNAME")
+	etcdPassword        = os.Getenv("ETCD_PASSWORD")
 )
 
 func main() {
@@ -56,6 +60,7 @@ func OpenDatabaseConnection() (*sql.DB, error) {
 		return nil, err
 	}
 
+	fmt.Println("connected to: ", host, port)
 	return db, nil
 }
 
@@ -83,9 +88,10 @@ func getRouter() *mux.Router {
 func createRedisClient() *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     redisAddress,
-		Password: "",
+		Password: redisPassword,
 		DB:       getRedisDatabaseNumber(),
 	})
+
 	return rdb
 }
 
@@ -99,22 +105,26 @@ func getRedisDatabaseNumber() int {
 
 func registerService() {
 	config := clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
-		DialTimeout: 5 * time.Second,
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
 	}
 
 	client, err := clientv3.New(config)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("error connecting to etcd:", err)
 		return
 	}
 	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	_, err = client.Put(ctx, "auth-service", fullHostname+serverPort)
+	_, err = client.Put(ctx, "auth-service", fullHostname)
 	cancel()
 	if err != nil {
 		fmt.Println("put failed, err:", err)
 		return
 	}
+
+	fmt.Println("write to etcd successful")
 }
