@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow/models"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/post_data"
+	"github.com/lib/pq"
 )
 
 type PostStore interface {
-	RetrieveFollowingPosts(username string) ([]*post_data.PostData, error)
+	RetrieveFollowingPosts(following []models.Following) ([]*post_data.PostData, error)
 	SearchPosts(name string) ([]*post_data.PostData, error)
 }
 
@@ -25,11 +27,11 @@ func NewPostStore(db *sql.DB) PostStore {
 	}
 }
 
-func (store *postStore) RetrieveFollowingPosts(username string) ([]*post_data.PostData, error) {
+func (store *postStore) RetrieveFollowingPosts(following []models.Following) ([]*post_data.PostData, error) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
-	rows, err := store.db.Query(getPostsOfFollowing, username)
+	rows, err := store.db.Query(getPostsOfFollowing, pq.Array(following))
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,6 @@ func (store *postStore) RetrieveFollowingPosts(username string) ([]*post_data.Po
 	posts := []*post_data.PostData{}
 	for rows.Next() {
 		post := &post_data.PostData{}
-
 		err = rows.Scan(&post.Name, &post.Path, &post.Owner, &post.CreatedOn)
 		if err != nil {
 			return nil, err

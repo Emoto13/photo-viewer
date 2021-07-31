@@ -20,6 +20,25 @@ func NewFollowService(authClient auth.AuthClient, followStore follow.FollowStore
 	return &followService{authClient: authClient, followStore: followStore}
 }
 
+func (fs *followService) CreateUser(w http.ResponseWriter, r *http.Request) {
+	body, err := getRequestBody(r.Body)
+	if err != nil {
+		fmt.Println(err)
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err = fs.followStore.CreateUser(body["username"])
+	if err != nil {
+		fmt.Println(err)
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{"Message": fmt.Sprintf("User %s created successfully", body["username"])})
+	return
+}
+
 func (fs *followService) Follow(w http.ResponseWriter, r *http.Request) {
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
@@ -84,7 +103,7 @@ func (fs *followService) GetFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]*models.Follower{"followers": followers})
+	response, _ := json.Marshal(map[string][]models.Follower{"followers": followers})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -99,12 +118,15 @@ func (fs *followService) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	following, err := fs.followStore.GetFollowing(username)
+	fmt.Println("HERE")
+	fmt.Println(following[0])
 	if err != nil {
+		fmt.Println(err)
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]*models.Following{"following": following})
+	response, _ := json.Marshal(map[string][]models.Following{"following": following})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -124,7 +146,7 @@ func (fs *followService) GetSuggestions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]*models.Suggestion{"suggestions": suggestions})
+	response, _ := json.Marshal(map[string][]models.Suggestion{"suggestions": suggestions})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)

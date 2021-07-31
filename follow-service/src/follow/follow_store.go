@@ -1,37 +1,45 @@
 package follow
 
 import (
-	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow/models"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 type FollowStore interface {
-	SaveFollow(follow *models.Follow) error
-	RemoveFollow(follow *models.Follow) error
-	GetFollowers(username string) ([]*models.Follower, error)
-	GetFollowing(username string) ([]*models.Following, error)
-	GetSuggestions(username string) ([]*models.Suggestion, error)
+	CreateUser(username string) error
+	SaveFollow(follow models.Follow) error
+	RemoveFollow(follow models.Follow) error
+	GetFollowers(username string) ([]models.Follower, error)
+	GetFollowing(username string) ([]models.Following, error)
+	GetSuggestions(username string) ([]models.Suggestion, error)
 }
 
 type followStore struct {
-	db *sql.DB
-	mu sync.RWMutex
+	driver    neo4j.Driver
+	connector Neo4jConnector
+	mu        sync.RWMutex
 }
 
-func NewFollowStore(db *sql.DB) FollowStore {
+func NewFollowStore(driver neo4j.Driver, connector Neo4jConnector) FollowStore {
 	return &followStore{
-		db: db,
-		mu: sync.RWMutex{},
+		driver:    driver,
+		connector: connector,
+		mu:        sync.RWMutex{},
 	}
 }
 
-func (store *followStore) SaveFollow(follow *models.Follow) error {
+func (store *followStore) CreateUser(username string) error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
-	_, err := store.db.Exec(addFollow, follow.Username, follow.Following)
+	session := store.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
+
+	query := store.connector.CreateUser(username)
+	_, err := session.WriteTransaction(query)
 	if err != nil {
 		return err
 	}
@@ -39,11 +47,15 @@ func (store *followStore) SaveFollow(follow *models.Follow) error {
 	return nil
 }
 
-func (store *followStore) RemoveFollow(follow *models.Follow) error {
+func (store *followStore) SaveFollow(follow models.Follow) error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
-	_, err := store.db.Exec(removeFollow, follow.Username, follow.Following)
+	session := store.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
+
+	query := store.connector.SaveFollow(follow.GetUsername(), follow.GetFollowing())
+	_, err := session.WriteTransaction(query)
 	if err != nil {
 		return err
 	}
@@ -51,85 +63,73 @@ func (store *followStore) RemoveFollow(follow *models.Follow) error {
 	return nil
 }
 
-func (store *followStore) GetFollowers(username string) ([]*models.Follower, error) {
-	store.mu.RLock()
-	defer store.mu.RUnlock()
+func (store *followStore) RemoveFollow(follow models.Follow) error {
+	store.mu.Lock()
+	defer store.mu.Unlock()
 
-	rows, err := store.db.Query(getFollowers, username)
+	session := store.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
+
+	query := store.connector.RemoveFollow(follow.GetUsername(), follow.GetFollowing())
+	_, err := session.WriteTransaction(query)
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	followerSlice := []*models.Follower{}
-	for rows.Next() {
-		follower := &models.Follower{}
-		err = rows.Scan(&follower.Username)
-		if err != nil {
-			return nil, err
-		}
-
-		followerSlice = append(followerSlice, follower)
+		return err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return followerSlice, nil
+	return nil
 }
 
-func (store *followStore) GetFollowing(username string) ([]*models.Following, error) {
+func (store *followStore) GetFollowers(username string) ([]models.Follower, error) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
-	rows, err := store.db.Query(getFollowing, username)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	session := store.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
 
-	followingSlice := []*models.Following{}
-	for rows.Next() {
-		following := &models.Following{}
-		err = rows.Scan(&following.Username)
-		if err != nil {
-			return nil, err
-		}
-		followingSlice = append(followingSlice, following)
-	}
-
+	query := store.connector.GetFollowers(username)
+	followers, err := session.ReadTransaction(query)
 	if err != nil {
 		return nil, err
 	}
 
-	return followingSlice, nil
+	return followers.([]models.Follower), nil
 }
 
-func (store *followStore) GetSuggestions(username string) ([]*models.Suggestion, error) {
+func (store *followStore) GetFollowing(username string) ([]models.Following, error) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
-	rows, err := store.db.Query(getSuggestions, username)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	session := store.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
 
-	suggestions := []*models.Suggestion{}
-	for rows.Next() {
-		suggestion := &models.Suggestion{}
-		err = rows.Scan(&suggestion.Username)
-		if err != nil {
-			return nil, err
-		}
+	fmt.Println("before query")
+	query := store.connector.GetFollowings(username)
+	fmt.Println("after query")
 
-		suggestions = append(suggestions, suggestion)
-	}
+	fmt.Println("before trans")
+	followings, err := session.ReadTransaction(query)
+	fmt.Println("after trans")
 
 	if err != nil {
+		fmt.Println("error getting followings:", err)
 		return nil, err
 	}
 
-	return suggestions, nil
+	return followings.([]models.Following), nil
+}
+
+func (store *followStore) GetSuggestions(username string) ([]models.Suggestion, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+
+	session := store.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
+
+	query := store.connector.GetSuggestions(username)
+	suggestions, err := session.ReadTransaction(query)
+	if err != nil {
+		return nil, err
+	}
+
+	return suggestions.([]models.Suggestion), nil
 }

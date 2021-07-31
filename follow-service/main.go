@@ -12,6 +12,7 @@ import (
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/auth"
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/service"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"go.etcd.io/etcd/clientv3"
 
 	"github.com/gorilla/mux"
@@ -22,16 +23,19 @@ import (
 )
 
 var (
-	host         = os.Getenv("POSTGRE_HOST")
-	port         = os.Getenv("POSTGRE_PORT")
-	dbuser       = os.Getenv("POSTGRE_USER")
-	password     = os.Getenv("POSTGRE_PASSWORD")
-	dbname       = os.Getenv("POSTGRE_DB_NAME")
-	serverPort   = os.Getenv("FOLLOW_SERVICE_PORT")
-	fullHostname = os.Getenv("FULL_HOSTNAME")
-	etcdAddress  = os.Getenv("ETCD_ADDRESS")
-	etcdUsername = os.Getenv("ETCD_USERNAME")
-	etcdPassword = os.Getenv("ETCD_PASSWORD")
+	host          = os.Getenv("POSTGRE_HOST")
+	port          = os.Getenv("POSTGRE_PORT")
+	dbuser        = os.Getenv("POSTGRE_USER")
+	password      = os.Getenv("POSTGRE_PASSWORD")
+	dbname        = os.Getenv("POSTGRE_DB_NAME")
+	serverPort    = os.Getenv("FOLLOW_SERVICE_PORT")
+	fullHostname  = os.Getenv("FULL_HOSTNAME")
+	etcdAddress   = os.Getenv("ETCD_ADDRESS")
+	etcdUsername  = os.Getenv("ETCD_USERNAME")
+	etcdPassword  = os.Getenv("ETCD_PASSWORD")
+	neo4jUsername = os.Getenv("NEO4J_USERNAME")
+	neo4jPassword = os.Getenv("NEO4J_PASSWORD")
+	neo4jAddress  = os.Getenv("NEO4J_DB_ADDRESS")
 )
 
 func main() {
@@ -49,17 +53,20 @@ func main() {
 }
 
 func getRouter() *mux.Router {
-	db, err := OpenDatabaseConnection()
+	driver, err := CreateNeo4jDriver()
 	if err != nil {
-		log.Fatalf("failed to open database connection: %v", err)
+		log.Fatalf("failed to open neo4j database connection: %v", err)
 	}
 
-	followStore := follow.NewFollowStore(db)
+	neo4jConnector := follow.NewNeo4jConnector()
+	followStore := follow.NewFollowStore(driver, neo4jConnector)
+
 	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
 	followService := service.NewFollowService(authClient, followStore)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
+	router.HandleFunc("/follow-service/create-user", followService.CreateUser).Methods("POST")
 	router.HandleFunc("/follow-service/follow", followService.Follow).Methods("POST")
 	router.HandleFunc("/follow-service/unfollow", followService.Unfollow).Methods("POST")
 	router.HandleFunc("/follow-service/get-followers", followService.GetFollowers).Methods("GET")
@@ -68,6 +75,16 @@ func getRouter() *mux.Router {
 	router.HandleFunc("/follow-service/health-check", followService.HealthCheck).Methods("GET")
 
 	return router
+}
+
+func CreateNeo4jDriver() (neo4j.Driver, error) {
+	fmt.Println(neo4jUsername, neo4jPassword, neo4jAddress)
+	driver, err := neo4j.NewDriver(neo4jAddress, neo4j.BasicAuth(neo4jUsername, neo4jPassword, ""))
+	if err != nil {
+		return nil, err
+	}
+
+	return driver, nil
 }
 
 func OpenDatabaseConnection() (*sql.DB, error) {

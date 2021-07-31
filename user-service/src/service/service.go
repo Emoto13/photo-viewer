@@ -4,15 +4,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Emoto13/photo-viewer-rest/user-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/user-service/src/store"
 )
 
 type userService struct {
-	store store.UserStore
+	store        store.UserStore
+	followClient follow.FollowClient
 }
 
-func NewUserService(store store.UserStore) *userService {
-	return &userService{store: store}
+func NewUserService(store store.UserStore, followClient follow.FollowClient) *userService {
+	return &userService{
+		store:        store,
+		followClient: followClient,
+	}
 }
 
 func (us *userService) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -37,6 +42,14 @@ func (us *userService) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = us.followClient.CreateUser(body["username"])
+	if err != nil {
+		fmt.Println(err)
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	fmt.Println("User created successfully")
 	respondWithJSON(w, http.StatusOK, map[string]string{"Status": "success"})
 	return
 }

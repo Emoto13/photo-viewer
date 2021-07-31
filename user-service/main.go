@@ -9,8 +9,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/Emoto13/photo-viewer-rest/user-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/user-service/src/service"
 	"github.com/Emoto13/photo-viewer-rest/user-service/src/store"
+
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
@@ -51,14 +53,14 @@ func getRouter() *mux.Router {
 
 	}
 
+	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress()+":10001")
 	userStore := store.NewUserStore(db)
-	userService := service.NewUserService(userStore)
+	userService := service.NewUserService(userStore, followClient)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
 	router.HandleFunc("/user-service/create-user", userService.CreateUser).Methods("POST")
 	router.HandleFunc("/user-service/health-check", userService.HealthCheck).Methods("POST")
-
 	return router
 }
 
@@ -97,4 +99,35 @@ func registerService() {
 		fmt.Println("put failed, err:", err)
 		return
 	}
+}
+
+func getFollowServiceAddress() string {
+	config := clientv3.Config{
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
+	}
+
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Println(err)
+		return fullHostname + ":10001"
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.Get(ctx, "follow-service")
+	cancel()
+	if err != nil {
+		fmt.Println("get failed err:", err)
+		return fullHostname + ":10001"
+	}
+
+	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
+		return fullHostname + ":10001"
+	}
+
+	fmt.Println(string(resp.Kvs[0].Value))
+	return string(resp.Kvs[0].Value)
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/cache_store"
@@ -15,20 +16,29 @@ import (
 )
 
 type postService struct {
-	authClient auth.AuthClient
-	postStore  post_store.PostStore
-	postCache  cache_store.PostCacheStore
+	authClient   auth.AuthClient
+	postStore    post_store.PostStore
+	postCache    cache_store.PostCacheStore
+	followClient follow.FollowClient
 }
 
-func New(authClient auth.AuthClient, postStore post_store.PostStore, postCache cache_store.PostCacheStore) *postService {
+func New(authClient auth.AuthClient, postStore post_store.PostStore, postCache cache_store.PostCacheStore, followClient follow.FollowClient) *postService {
 	return &postService{
-		authClient: authClient,
-		postStore:  postStore,
-		postCache:  postCache,
+		authClient:   authClient,
+		followClient: followClient,
+		postStore:    postStore,
+		postCache:    postCache,
 	}
 }
 
 func (s *postService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) {
+	followings, err := s.followClient.GetFollowing(r.Header.Get("Authorization"))
+	fmt.Println(followings)
+	if err != nil {
+		fmt.Println("could not retrieve followings", err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
+	}
+
 	username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
 		fmt.Println("Couldn't authenticate")
@@ -45,7 +55,7 @@ func (s *postService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	posts, err := s.postStore.RetrieveFollowingPosts(username)
+	posts, err := s.postStore.RetrieveFollowingPosts(followings)
 	if err != nil {
 		fmt.Println("Couldnt retrieve following posts")
 		respondWithError(w, http.StatusBadRequest, err.Error())
@@ -53,7 +63,6 @@ func (s *postService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) 
 	}
 
 	s.postCache.Set(context.Background(), username, posts)
-
 	response, _ := json.Marshal(map[string][]*post_data.PostData{"posts": posts})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

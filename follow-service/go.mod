@@ -11,18 +11,16 @@ require (
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.9.5 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.14.5 // indirect
 	github.com/lib/pq v1.10.2
+	github.com/neo4j/neo4j-go-driver/v4 v4.3.3 // indirect
 	github.com/rs/cors v1.8.0 // indirect
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.uber.org/zap v1.18.1 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.1.4 // indirect
 	google.golang.org/grpc v1.26.0
 	google.golang.org/protobuf v1.27.1

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/cache_store"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/service"
@@ -57,10 +58,13 @@ func getRouter() *mux.Router {
 	if err != nil {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
-	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
+
+	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress()+":10000")
+	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress()+":10001")
+
 	postStore := post_store.NewPostStore(db)
 	redisCache := cache_store.NewPostCacheStore(newCacheDatabase())
-	postService := service.New(authClient, postStore, redisCache)
+	postService := service.New(authClient, postStore, redisCache, followClient)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
@@ -166,6 +170,37 @@ func getAuthServiceAddress() string {
 
 	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
 		return fullHostname + ":10000"
+	}
+
+	fmt.Println(string(resp.Kvs[0].Value))
+	return string(resp.Kvs[0].Value)
+}
+
+func getFollowServiceAddress() string {
+	config := clientv3.Config{
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
+	}
+
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Println(err)
+		return fullHostname + ":10001"
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.Get(ctx, "follow-service")
+	cancel()
+	if err != nil {
+		fmt.Println("get failed err:", err)
+		return fullHostname + ":10001"
+	}
+
+	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
+		return fullHostname + ":10001"
 	}
 
 	fmt.Println(string(resp.Kvs[0].Value))
