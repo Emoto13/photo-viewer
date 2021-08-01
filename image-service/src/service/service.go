@@ -5,21 +5,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/image-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/image_store"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/image_store/image_data"
+	"github.com/Emoto13/photo-viewer-rest/image-service/src/post"
+	"github.com/Emoto13/photo-viewer-rest/image-service/src/post/models"
 )
 
 type imageService struct {
 	authClient auth.AuthClient
+	postClient post.PostClient
+	feedClient feed.FeedClient
 	imageStore image_store.ImageStore
 }
 
-func New(authClient auth.AuthClient, imageStore image_store.ImageStore) *imageService {
+func New(authClient auth.AuthClient, postClient post.PostClient, feedClient feed.FeedClient, imageStore image_store.ImageStore) *imageService {
 	return &imageService{
 		authClient: authClient,
 		imageStore: imageStore,
+		feedClient: feedClient,
+		postClient: postClient,
 	}
 }
 
@@ -43,7 +51,7 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.imageStore.UploadImage(&image_data.UploadImage{
+	path, err := s.imageStore.UploadImage(&image_data.UploadImage{
 		Name:     imageName,
 		FileName: fileName,
 		Data:     buf.Bytes(),
@@ -51,9 +59,28 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		fmt.Println("failed to upload: ", err)
+		fmt.Println("failed to upload: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	post := &models.Post{
+		Username:  username,
+		Name:      imageName,
+		Path:      path,
+		CreatedOn: time.Now(),
+	}
+
+	err = s.feedClient.AddToFollowersFeed(r.Header.Get("Authorization"), post)
+	if err != nil {
+		fmt.Println("failed to add to followers feed: ", err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
+	}
+
+	err = s.postClient.CreatePost(r.Header.Get("Authorization"), post)
+	if err != nil {
+		fmt.Println("failed to create post: ", err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
 	}
 
 	fmt.Println("Image ", imageName, " was successfully uploaded")

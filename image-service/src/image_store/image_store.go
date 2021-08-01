@@ -9,7 +9,7 @@ import (
 )
 
 type ImageStore interface {
-	UploadImage(imageData *image_data.UploadImage) error
+	UploadImage(imageData *image_data.UploadImage) (string, error)
 }
 
 type imageStore struct {
@@ -26,20 +26,20 @@ func NewImageStore(connector S3Connector, db *sql.DB) ImageStore {
 	}
 }
 
-func (store *imageStore) UploadImage(imageData *image_data.UploadImage) error {
+func (store *imageStore) UploadImage(imageData *image_data.UploadImage) (string, error) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
 	fileUrl, err := store.connector.UploadFile(imageData)
 	if err != nil {
 		fmt.Println("could not upload to s3")
-		return err
+		return "", err
 	}
 
 	_, err = store.db.Exec(addImageToDatabase, imageData.Owner, fileUrl, imageData.Name)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return fileUrl, nil
 }

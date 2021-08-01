@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/image-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/image_store"
+	"github.com/Emoto13/photo-viewer-rest/image-service/src/post"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/service"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -62,8 +64,11 @@ func getRouter() *mux.Router {
 	s3Connector := image_store.NewS3Connector(s3Service, sess)
 
 	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
+	postClient := post.NewPostClient(&http.Client{}, getPostServiceAddress())
+	feedClient := feed.NewFeedClient(&http.Client{}, getFeedServiceAddress())
 	imageStore := image_store.NewImageStore(s3Connector, db)
-	imageService := service.New(authClient, imageStore)
+
+	imageService := service.New(authClient, postClient, feedClient, imageStore)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
@@ -135,6 +140,69 @@ func getAuthServiceAddress() string {
 
 	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
 		return fullHostname + ":10000"
+	}
+
+	fmt.Println(string(resp.Kvs[0].Value))
+	return string(resp.Kvs[0].Value)
+}
+
+func getPostServiceAddress() string {
+	config := clientv3.Config{
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
+	}
+
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Println(err)
+		return fullHostname + ":10005"
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.Get(ctx, "post-service")
+	cancel()
+	if err != nil {
+		fmt.Println("get failed err:", err)
+		return fullHostname + ":10005"
+	}
+
+	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
+		fmt.Println("get failed err 2:", err)
+		return fullHostname + ":10005"
+	}
+
+	fmt.Println(string(resp.Kvs[0].Value))
+	return string(resp.Kvs[0].Value)
+}
+
+func getFeedServiceAddress() string {
+	config := clientv3.Config{
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
+	}
+
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Println(err)
+		return fullHostname + ":10006"
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.Get(ctx, "feed-service")
+	cancel()
+	if err != nil {
+		fmt.Println("get failed err:", err)
+		return fullHostname + ":10006"
+	}
+
+	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
+		return fullHostname + ":10006"
 	}
 
 	fmt.Println(string(resp.Kvs[0].Value))
