@@ -53,7 +53,7 @@ func getRouter() *mux.Router {
 
 	}
 
-	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress()+":10001")
+	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress())
 	userStore := store.NewUserStore(db)
 	userService := service.NewUserService(userStore, followClient)
 
