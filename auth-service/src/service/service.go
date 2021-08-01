@@ -88,18 +88,21 @@ func (service *AuthServer) Authenticate(w http.ResponseWriter, r *http.Request) 
 	fmt.Println("Authenticating", r.Header.Get("Authorization"))
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
+		fmt.Println("empty authorization header")
 		respondWithError(w, http.StatusBadRequest, "Invalid authorization header")
 		return
 	}
 
 	token, err := getAuthToken(authHeader)
 	if err != nil {
+		fmt.Println("error getting token")
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	username, err := service.tokenManager.GetUsernameFromToken(token)
 	if err != nil {
+		fmt.Println("couldn't retrieve username from token")
 		respondWithError(w, http.StatusBadRequest, "Invalid token")
 		return
 	}
