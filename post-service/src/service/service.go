@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,52 +21,55 @@ type postService struct {
 	followClient follow.FollowClient
 }
 
-func New(authClient auth.AuthClient, postStore post_store.PostStore, postCache cache_store.PostCacheStore, followClient follow.FollowClient) *postService {
+func New(authClient auth.AuthClient, postStore post_store.PostStore, followClient follow.FollowClient) *postService {
 	return &postService{
 		authClient:   authClient,
 		followClient: followClient,
 		postStore:    postStore,
-		postCache:    postCache,
 	}
 }
 
-func (s *postService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) {
-	followings, err := s.followClient.GetFollowing(r.Header.Get("Authorization"))
-	fmt.Println(followings)
-	if err != nil {
-		fmt.Println("could not retrieve followings", err.Error())
-		respondWithError(w, http.StatusBadRequest, err.Error())
-	}
-
+func (s *postService) CreatePost(w http.ResponseWriter, r *http.Request) {
 	username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println("Couldn't authenticate")
+		fmt.Println("couldn't authenticate", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	cachedResult, err := s.postCache.Get(context.Background(), username)
-	if err == nil {
-		response, _ := json.Marshal(map[string][]*post_data.PostData{"posts": cachedResult})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(response)
-		return
-	}
-
-	posts, err := s.postStore.RetrieveFollowingPosts(followings)
+	post, err := getRequestBody(r.Body)
 	if err != nil {
-		fmt.Println("Couldnt retrieve following posts")
+		fmt.Println(err)
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	s.postCache.Set(context.Background(), username, posts)
+	err = s.postStore.CreatePost(username, post)
+	if err != nil {
+		fmt.Println("couldnt write post to cassandra:", err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	fmt.Println("Post created successfully")
+	respondWithJSON(w, http.StatusOK, map[string]string{"Message": "Post created successfully"})
+}
+
+func (s *postService) GetUserPosts(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	name := params["username"]
+	posts, err := s.postStore.GetUserPosts(name)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	response, _ := json.Marshal(map[string][]*post_data.PostData{"posts": posts})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 	return
+
 }
 
 func (s *postService) SearchPosts(w http.ResponseWriter, r *http.Request) {

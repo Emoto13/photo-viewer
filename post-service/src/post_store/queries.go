@@ -9,12 +9,18 @@ const (
 	  ORDER BY posts.created_on DESC;`*/
 	getPostsOfFollowing = `SELECT posts.username, images.path, posts.name, posts.created_on
 						   FROM posts
-						   INNER JOIN images ON images.id = posts.image_id
+						   INNER JOIN images ON images.id=posts.image_id
 						   WHERE posts.username IN $1
-						   ORDER BY posts.created_on DESC;
-						`
+						   ORDER BY posts.created_on DESC;`
+
 	searchPosts = `SELECT posts.name, images.path, posts.username,posts.created_on 
 				   FROM posts
 				   INNER JOIN images ON posts.image_id=images.id
 				   WHERE LOWER(posts.name) LIKE LOWER($1);`
+
+	getUserPosts = `SELECT posts.name, images.path, posts.username, posts.created_on
+					FROM posts
+					INNER JOIN images ON images.id = posts.image_id
+					WHERE posts.username=$1
+					ORDER BY posts.created_on DESC;`
 )

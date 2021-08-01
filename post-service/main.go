@@ -7,16 +7,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/cache_store"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/service"
-	"github.com/go-redis/cache/v8"
-	"github.com/go-redis/redis/v8"
+	"github.com/gocql/gocql"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
@@ -24,20 +21,20 @@ import (
 )
 
 var (
-	host                = os.Getenv("POSTGRE_HOST")
-	port                = os.Getenv("POSTGRE_PORT")
-	dbuser              = os.Getenv("POSTGRE_USER")
-	password            = os.Getenv("POSTGRE_PASSWORD")
-	dbname              = os.Getenv("POSTGRE_DB_NAME")
-	serverPort          = os.Getenv("POST_SERVICE_PORT")
-	redisPort           = os.Getenv("REDIS_PORT")
-	fullHostname        = os.Getenv("FULL_HOSTNAME")
-	redisDatabaseNumber = os.Getenv("REDIS_POST_DATABASE_NUMBER")
-	redisAddress        = os.Getenv("REDIS_ADDRESS")
-	redisPassword       = os.Getenv("REDIS_PASSWORD")
-	etcdAddress         = os.Getenv("ETCD_ADDRESS")
-	etcdUsername        = os.Getenv("ETCD_USERNAME")
-	etcdPassword        = os.Getenv("ETCD_PASSWORD")
+	host              = os.Getenv("POSTGRE_HOST")
+	port              = os.Getenv("POSTGRE_PORT")
+	dbuser            = os.Getenv("POSTGRE_USER")
+	password          = os.Getenv("POSTGRE_PASSWORD")
+	dbname            = os.Getenv("POSTGRE_DB_NAME")
+	serverPort        = os.Getenv("POST_SERVICE_PORT")
+	fullHostname      = os.Getenv("FULL_HOSTNAME")
+	etcdAddress       = os.Getenv("ETCD_ADDRESS")
+	etcdUsername      = os.Getenv("ETCD_USERNAME")
+	etcdPassword      = os.Getenv("ETCD_PASSWORD")
+	cassandraAddress  = os.Getenv("CASSANDRA_ADDRESS")
+	cassandraUsername = os.Getenv("CASSANDRA_USERNAME")
+	cassandraPassword = os.Getenv("CASSANDRA_PASSWORD")
+	cassandraKeyspace = os.Getenv("CASSANDRA_KEYSPACE")
 )
 
 func main() {
@@ -48,7 +45,7 @@ func main() {
 		AllowCredentials: true,
 	})
 	handler := c.Handler(router)
-
+	registerService()
 	fmt.Println("Starting to listen at port:", serverPort)
 	http.ListenAndServe(serverPort, handler)
 }
@@ -59,17 +56,22 @@ func getRouter() *mux.Router {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 
-	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress()+":10000")
-	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress()+":10001")
+	session, err := newCassandraSession()
+	if err != nil {
+		fmt.Println("cannot open Cassandra session:", err.Error())
+	}
 
-	postStore := post_store.NewPostStore(db)
-	redisCache := cache_store.NewPostCacheStore(newCacheDatabase())
-	postService := service.New(authClient, postStore, redisCache, followClient)
+	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
+	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress())
+
+	postStore := post_store.NewPostStore(db, session)
+	postService := service.New(authClient, postStore, followClient)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
-	router.HandleFunc("/post-service/get-following-posts", postService.GetFollowingPosts).Methods("GET")
 	router.HandleFunc("/post-service/search-posts/{query}", postService.SearchPosts).Methods("GET")
+	router.HandleFunc("/post-service/create-post", postService.CreatePost).Methods("POST")
+	router.HandleFunc("/post-service/posts/{username}", postService.GetUserPosts).Methods("GET")
 	router.HandleFunc("/post-service/health-check", postService.HealthCheck).Methods("GET")
 
 	return router
@@ -88,37 +90,19 @@ func OpenDatabaseConnection() (*sql.DB, error) {
 	return db, nil
 }
 
-func newCacheDatabase() *cache.Cache {
-	ring := redis.NewRing(&redis.RingOptions{
-		Addrs: map[string]string{
-			"server1": redisPort,
-		},
-	})
+func newCassandraSession() (*gocql.Session, error) {
+	cluster := gocql.NewCluster(cassandraAddress)
+	cluster.ProtoVersion = 4
+	cluster.ConnectTimeout = time.Second * 15
+	cluster.Keyspace = cassandraKeyspace
+	cluster.Authenticator = gocql.PasswordAuthenticator{Username: cassandraUsername, Password: cassandraPassword}
 
-	redisCache := cache.New(&cache.Options{
-		Redis:      ring,
-		LocalCache: cache.NewTinyLFU(1000, 15*time.Minute),
-	})
-
-	return redisCache
-}
-
-func createRedisClient() *redis.Client {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     redisAddress,
-		Password: redisPassword,
-		DB:       getRedisDatabaseNumber(),
-	})
-
-	return rdb
-}
-
-func getRedisDatabaseNumber() int {
-	val, err := strconv.Atoi(redisDatabaseNumber)
+	session, err := cluster.CreateSession()
 	if err != nil {
-		return 0
+		return nil, err
 	}
-	return val
+
+	return session, nil
 }
 
 func registerService() {

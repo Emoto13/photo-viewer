@@ -2,14 +2,13 @@ package follow
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow/models"
 )
 
 type FollowClient interface {
-	GetFollowing(authHeader string) ([]models.Following, error)
+	GetFollowing(authHeader string) ([]*models.Following, error)
 }
 
 type followClient struct {
@@ -21,7 +20,7 @@ func NewFollowClient(client *http.Client, address string) FollowClient {
 	return &followClient{client: client, address: address}
 }
 
-func (c *followClient) GetFollowing(authHeader string) ([]models.Following, error) {
+func (c *followClient) GetFollowing(authHeader string) ([]*models.Following, error) {
 	req, err := http.NewRequest("GET", c.address+"/follow-service/get-following", nil)
 	if err != nil {
 		return nil, err
@@ -32,8 +31,8 @@ func (c *followClient) GetFollowing(authHeader string) ([]models.Following, erro
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("here")
-	var responseMap map[string][]models.Following
+
+	var responseMap map[string][]*models.Following
 	err = json.NewDecoder(resp.Body).Decode(&responseMap)
 	if err != nil {
 		return nil, err

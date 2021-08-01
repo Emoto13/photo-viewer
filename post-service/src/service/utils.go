@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/post_data"
 )
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
@@ -20,19 +22,19 @@ func respondWithJSON(w http.ResponseWriter, code int, payload map[string]string)
 	w.Write(response)
 }
 
-func getRequestBody(requestBody io.ReadCloser) (map[string]interface{}, error) {
+func getRequestBody(requestBody io.ReadCloser) (*post_data.PostData, error) {
 	bodyBytes, err := ioutil.ReadAll(requestBody)
 	if err != nil {
 		return nil, err
 	}
 
-	var result map[string]interface{}
+	var result map[string]*post_data.PostData
 	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return result["post"], nil
 }
 
 func getAuthToken(authHeader string) (string, error) {
