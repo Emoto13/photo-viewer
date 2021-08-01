@@ -73,7 +73,7 @@ func (n *neo4jConnector) RemoveFollow(followerUsername, followingUsername string
 
 func (n *neo4jConnector) GetFollowers(username string) func(tx neo4j.Transaction) (interface{}, error) {
 	return func(tx neo4j.Transaction) (interface{}, error) {
-		records, err := tx.Run("MATCH (n:User { username: $username })-->(user) RETURN user.username", map[string]interface{}{
+		records, err := tx.Run("MATCH (n:User { username: $username })<--(user) RETURN user.username", map[string]interface{}{
 			"username": username,
 		})
 
@@ -88,10 +88,11 @@ func (n *neo4jConnector) GetFollowers(username string) func(tx neo4j.Transaction
 			return nil, err
 		}
 
-		followers := []models.Follower{}
+		followers := []*models.Follower{}
 		for _, entry := range slice {
 			fmt.Println("entry: ", entry.Values)
-			follower := models.NewFollower(entry.Values[0].(string))
+
+			follower := &models.Follower{Username: entry.Values[0].(string)}
 			followers = append(followers, follower)
 		}
 
@@ -101,7 +102,8 @@ func (n *neo4jConnector) GetFollowers(username string) func(tx neo4j.Transaction
 
 func (n *neo4jConnector) GetFollowings(username string) func(tx neo4j.Transaction) (interface{}, error) {
 	return func(tx neo4j.Transaction) (interface{}, error) {
-		records, err := tx.Run("MATCH (n:User { username: $username })<--(user) RETURN user.username", map[string]interface{}{
+		fmt.Println(username)
+		records, err := tx.Run("MATCH (n:User { username: $username })-->(user) RETURN user.username", map[string]interface{}{
 			"username": username,
 		})
 		if err != nil {
@@ -115,11 +117,11 @@ func (n *neo4jConnector) GetFollowings(username string) func(tx neo4j.Transactio
 			return nil, err
 		}
 
-		followings := []models.Following{}
+		followings := []*models.Following{}
 		for _, entry := range slice {
-			fmt.Println(entry.Values[0])
+			fmt.Println("entry: ", entry.Values[0])
 
-			following := models.NewFollowing(entry.Values[0].(string))
+			following := &models.Following{Username: entry.Values[0].(string)}
 			followings = append(followings, following)
 		}
 
@@ -131,11 +133,11 @@ func (n *neo4jConnector) GetSuggestions(username string) func(tx neo4j.Transacti
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		records, err := tx.Run(`MATCH (n:User)-[r:FOLLOWS*2]->(m:User)
 								WHERE n.username = $username 
-								RETURN distinct m AS Suggestion
+								RETURN distinct m.username AS Suggestion
 								UNION
 								MATCH (n:User), (m:User)
 								WHERE NOT (n)-[:FOLLOWS]->(m) AND NOT n.username = m.username AND n.username = $username 
-								RETURN m AS Suggestion
+								RETURN m.username AS Suggestion
 								LIMIT 10;`,
 			map[string]interface{}{
 				"username": username,
@@ -151,9 +153,11 @@ func (n *neo4jConnector) GetSuggestions(username string) func(tx neo4j.Transacti
 			return nil, err
 		}
 
-		suggestions := []models.Suggestion{}
+		suggestions := []*models.Suggestion{}
 		for _, entry := range slice {
-			suggestion := models.NewSuggestion(entry.Values[0].(string))
+			fmt.Println("entry: ", entry.Values[0])
+
+			suggestion := &models.Suggestion{Username: entry.Values[0].(string)}
 			suggestions = append(suggestions, suggestion)
 		}
 

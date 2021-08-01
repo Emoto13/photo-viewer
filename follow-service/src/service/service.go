@@ -4,20 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/follow-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow"
-
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow/models"
 )
 
 type followService struct {
 	authClient  auth.AuthClient
 	followStore follow.FollowStore
+	feedClient  feed.FeedClient
+	mu          sync.RWMutex
 }
 
-func NewFollowService(authClient auth.AuthClient, followStore follow.FollowStore) *followService {
-	return &followService{authClient: authClient, followStore: followStore}
+func NewFollowService(authClient auth.AuthClient, feedClient feed.FeedClient, followStore follow.FollowStore) *followService {
+	return &followService{
+		authClient:  authClient,
+		feedClient:  feedClient,
+		followStore: followStore,
+		mu:          sync.RWMutex{},
+	}
 }
 
 func (fs *followService) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +93,13 @@ func (fs *followService) Unfollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = fs.feedClient.UpdateFeed(r.Header.Get("Authorization"))
+	if err != nil {
+		fmt.Println("couldnt update feed", err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	fmt.Println(username, "unfollowed", body["unfollow"])
 	respondWithJSON(w, http.StatusOK, map[string]string{"Message": fmt.Sprintf("%s is unfollowed", body["unfollow"])})
 	return
@@ -93,6 +108,7 @@ func (fs *followService) Unfollow(w http.ResponseWriter, r *http.Request) {
 func (fs *followService) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
+		fmt.Println("Wrong credentials")
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -103,7 +119,7 @@ func (fs *followService) GetFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]models.Follower{"followers": followers})
+	response, _ := json.Marshal(map[string][]*models.Follower{"followers": followers})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -111,22 +127,22 @@ func (fs *followService) GetFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (fs *followService) GetFollowing(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Authorization: ", r.Header.Get("Authorization"))
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
+		fmt.Println("Couldn't auth")
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	following, err := fs.followStore.GetFollowing(username)
-	fmt.Println("HERE")
-	fmt.Println(following[0])
 	if err != nil {
 		fmt.Println(err)
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]models.Following{"following": following})
+	response, _ := json.Marshal(map[string][]*models.Following{"following": following})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -146,7 +162,7 @@ func (fs *followService) GetSuggestions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]models.Suggestion{"suggestions": suggestions})
+	response, _ := json.Marshal(map[string][]*models.Suggestion{"suggestions": suggestions})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)

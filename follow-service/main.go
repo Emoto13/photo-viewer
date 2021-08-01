@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/follow-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/follow-service/src/service"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
@@ -62,7 +63,9 @@ func getRouter() *mux.Router {
 	followStore := follow.NewFollowStore(driver, neo4jConnector)
 
 	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
-	followService := service.NewFollowService(authClient, followStore)
+	feedClient := feed.NewFeedClient(&http.Client{}, getFeedServiceAddress())
+
+	followService := service.NewFollowService(authClient, feedClient, followStore)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
@@ -73,12 +76,10 @@ func getRouter() *mux.Router {
 	router.HandleFunc("/follow-service/get-following", followService.GetFollowing).Methods("GET")
 	router.HandleFunc("/follow-service/get-suggestions", followService.GetSuggestions).Methods("GET")
 	router.HandleFunc("/follow-service/health-check", followService.HealthCheck).Methods("GET")
-
 	return router
 }
 
 func CreateNeo4jDriver() (neo4j.Driver, error) {
-	fmt.Println(neo4jUsername, neo4jPassword, neo4jAddress)
 	driver, err := neo4j.NewDriver(neo4jAddress, neo4j.BasicAuth(neo4jUsername, neo4jPassword, ""))
 	if err != nil {
 		return nil, err
@@ -149,6 +150,37 @@ func getAuthServiceAddress() string {
 
 	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
 		return fullHostname + ":10000"
+	}
+
+	fmt.Println(string(resp.Kvs[0].Value))
+	return string(resp.Kvs[0].Value)
+}
+
+func getFeedServiceAddress() string {
+	config := clientv3.Config{
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
+	}
+
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Println(err)
+		return fullHostname + ":10006"
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.Get(ctx, "feed-service")
+	cancel()
+	if err != nil {
+		fmt.Println("get failed err:", err)
+		return fullHostname + ":10006"
+	}
+
+	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
+		return fullHostname + ":10006"
 	}
 
 	fmt.Println(string(resp.Kvs[0].Value))

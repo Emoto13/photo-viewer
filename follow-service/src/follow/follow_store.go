@@ -12,9 +12,9 @@ type FollowStore interface {
 	CreateUser(username string) error
 	SaveFollow(follow models.Follow) error
 	RemoveFollow(follow models.Follow) error
-	GetFollowers(username string) ([]models.Follower, error)
-	GetFollowing(username string) ([]models.Following, error)
-	GetSuggestions(username string) ([]models.Suggestion, error)
+	GetFollowers(username string) ([]*models.Follower, error)
+	GetFollowing(username string) ([]*models.Following, error)
+	GetSuggestions(username string) ([]*models.Suggestion, error)
 }
 
 type followStore struct {
@@ -79,46 +79,46 @@ func (store *followStore) RemoveFollow(follow models.Follow) error {
 	return nil
 }
 
-func (store *followStore) GetFollowers(username string) ([]models.Follower, error) {
+func (store *followStore) GetFollowers(username string) ([]*models.Follower, error) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
 	session := store.driver.NewSession(neo4j.SessionConfig{})
+	fmt.Println("Session opening finished")
+
 	defer session.Close()
 
 	query := store.connector.GetFollowers(username)
 	followers, err := session.ReadTransaction(query)
+	fmt.Println("Transaction not finished")
+
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, err
 	}
-
-	return followers.([]models.Follower), nil
+	fmt.Println("Transaction finished")
+	fmt.Println(followers)
+	return followers.([]*models.Follower), nil
 }
 
-func (store *followStore) GetFollowing(username string) ([]models.Following, error) {
+func (store *followStore) GetFollowing(username string) ([]*models.Following, error) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
 	session := store.driver.NewSession(neo4j.SessionConfig{})
 	defer session.Close()
 
-	fmt.Println("before query")
 	query := store.connector.GetFollowings(username)
-	fmt.Println("after query")
-
-	fmt.Println("before trans")
 	followings, err := session.ReadTransaction(query)
-	fmt.Println("after trans")
-
 	if err != nil {
 		fmt.Println("error getting followings:", err)
 		return nil, err
 	}
 
-	return followings.([]models.Following), nil
+	return followings.([]*models.Following), nil
 }
 
-func (store *followStore) GetSuggestions(username string) ([]models.Suggestion, error) {
+func (store *followStore) GetSuggestions(username string) ([]*models.Suggestion, error) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
@@ -131,5 +131,5 @@ func (store *followStore) GetSuggestions(username string) ([]models.Suggestion, 
 		return nil, err
 	}
 
-	return suggestions.([]models.Suggestion), nil
+	return suggestions.([]*models.Suggestion), nil
 }
