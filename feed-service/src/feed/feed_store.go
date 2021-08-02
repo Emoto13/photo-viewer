@@ -71,7 +71,6 @@ func (s *feedStore) AddToFeed(username string, post *postModels.Post) error {
 	}
 
 	feed = append([]*postModels.Post{post}, feed...)
-	sortPosts(feed)
 	err = s.session.Query(`INSERT INTO feed(username, feed) VALUES (?, ?);`, username, feed).Exec()
 	if err != nil {
 		return err
