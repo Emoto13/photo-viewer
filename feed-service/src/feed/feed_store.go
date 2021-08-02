@@ -53,7 +53,7 @@ func (s *feedStore) UpdateFeed(username string, followings []*models.Following) 
 		feed = append(feed, temp...)
 	}
 
-	sortPosts(feed)
+	sortFeed(feed)
 	err := s.session.Query(`INSERT INTO feed(username, feed) VALUES (?, ?);`, username, feed).Exec()
 	if err != nil {
 		fmt.Println("could not execute insert query", err.Error())
