@@ -183,6 +183,6 @@ func getFeedServiceAddress() string {
 		return fullHostname + ":10006"
 	}
 
-	fmt.Println("found feed-service at: "string(resp.Kvs[0].Value))
+	fmt.Println("found feed-service at: ", string(resp.Kvs[0].Value))
 	return string(resp.Kvs[0].Value)
 }
