@@ -24,17 +24,10 @@ import (
 )
 
 var (
-	host                = os.Getenv("POSTGRE_HOST")
-	port                = os.Getenv("POSTGRE_PORT")
-	dbuser              = os.Getenv("POSTGRE_USER")
-	password            = os.Getenv("POSTGRE_PASSWORD")
-	dbname              = os.Getenv("POSTGRE_DB_NAME")
 	serverPort          = os.Getenv("FEED_SERVICE_PORT")
 	redisPort           = os.Getenv("REDIS_PORT")
 	fullHostname        = os.Getenv("FULL_HOSTNAME")
 	redisDatabaseNumber = os.Getenv("REDIS_POST_DATABASE_NUMBER")
-	redisAddress        = os.Getenv("REDIS_ADDRESS")
-	redisPassword       = os.Getenv("REDIS_PASSWORD")
 	etcdAddress         = os.Getenv("ETCD_ADDRESS")
 	etcdUsername        = os.Getenv("ETCD_USERNAME")
 	etcdPassword        = os.Getenv("ETCD_PASSWORD")
