@@ -44,6 +44,7 @@ func main() {
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
 	})
+
 	registerService()
 	handler := c.Handler(router)
 	fmt.Println("Starting to listen at port", serverPort)
@@ -63,15 +64,14 @@ func OpenDatabaseConnection() (*sql.DB, error) {
 	fmt.Println("connected to: ", host, port)
 	return db, nil
 }
-
 func getRouter() *mux.Router {
+	redisClient := createRedisClient()
 	db, err := OpenDatabaseConnection()
 	if err != nil {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 	state := user.NewState(db)
 
-	redisClient := createRedisClient()
 	tokenManager := token.NewTokenManager(redisClient)
 	authServer := service.New(state, tokenManager)
 
@@ -81,7 +81,6 @@ func getRouter() *mux.Router {
 	router.HandleFunc("/auth-service/logout", authServer.Logout).Methods("POST")
 	router.HandleFunc("/auth-service/authenticate", authServer.Authenticate).Methods("GET")
 	router.HandleFunc("/auth-service/health-check", authServer.HealthCheck).Methods("GET")
-
 	return router
 }
 

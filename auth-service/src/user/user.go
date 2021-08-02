@@ -21,7 +21,6 @@ func NewUser(username string, password string) (*User, error) {
 		Username:       username,
 		HashedPassword: string(hashedPassword),
 	}
-
 	return user, nil
 }
 

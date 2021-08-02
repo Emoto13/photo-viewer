@@ -33,6 +33,7 @@ func (m *tokenManager) GenerateToken(username string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	fmt.Println("Token: ", hash)
 	return string(hash), nil
 }
@@ -45,7 +46,6 @@ func (m *tokenManager) GetUsernameFromToken(token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return username, nil
 }
 
@@ -57,7 +57,6 @@ func (m *tokenManager) SaveToken(token Token) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -69,6 +68,5 @@ func (m *tokenManager) RemoveToken(token string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }

@@ -20,33 +20,34 @@ func New(state user.State, tokenManager token.TokenManager) *AuthServer {
 func (service *AuthServer) Login(w http.ResponseWriter, r *http.Request) {
 	body, err := getRequestBody(r.Body)
 	if err != nil {
-		fmt.Println("bad login request", err)
+		fmt.Println("bad login request:", err.Error())
 		respondWithError(w, http.StatusBadRequest, "Bad login request")
 		return
 	}
 
 	user, err := service.state.RetrieveUser(body["username"])
 	if err != nil {
-		fmt.Println("didn't retrieve user", err)
+		fmt.Println("didn't retrieve user:", err.Error())
 		respondWithError(w, http.StatusBadRequest, "Wrong username/password")
 		return
 	}
 
 	if user == nil || !user.IsCorrectPassword(body["password"]) {
-		fmt.Println("wrong username/password", err)
+		fmt.Println("wrong username/password:", err.Error())
 		respondWithError(w, http.StatusBadRequest, "Wrong username/password")
 		return
 	}
 
 	authToken, err := service.tokenManager.GenerateToken(body["username"])
 	if err != nil {
+		fmt.Println("failed to generate token: ", err.Error())
 		respondWithError(w, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
 	err = service.tokenManager.SaveToken(token.NewToken(authToken, body["username"]))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("failed to save token: ", err.Error())
 		respondWithError(w, http.StatusInternalServerError, "Failed to save token")
 		return
 	}
@@ -58,11 +59,10 @@ func (service *AuthServer) Login(w http.ResponseWriter, r *http.Request) {
 func (service *AuthServer) Logout(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		fmt.Println("Invalid authorization header")
+		fmt.Println("empty authorization header", err.Error())
 		respondWithError(w, http.StatusBadRequest, "Invalid authorization header")
 		return
 	}
-	fmt.Println("here")
 
 	token, err := getAuthToken(authHeader)
 	if err != nil {
@@ -70,16 +70,14 @@ func (service *AuthServer) Logout(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Println("here2")
 
 	err = service.tokenManager.RemoveToken(token)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("couldn't remove token: ", err.Error())
 		respondWithError(w, http.StatusInternalServerError, "Couldn't logout")
 		return
 	}
 
-	fmt.Println("here3")
 	respondWithJSON(w, http.StatusOK, map[string]string{"Message": "Successfully logged out"})
 	return
 }
@@ -95,19 +93,18 @@ func (service *AuthServer) Authenticate(w http.ResponseWriter, r *http.Request) 
 
 	token, err := getAuthToken(authHeader)
 	if err != nil {
-		fmt.Println("error getting token")
+		fmt.Println("error getting token", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	username, err := service.tokenManager.GetUsernameFromToken(token)
 	if err != nil {
-		fmt.Println("couldn't retrieve username from token")
+		fmt.Println("couldn't retrieve username from token", err.Error())
 		respondWithError(w, http.StatusBadRequest, "Invalid token")
 		return
 	}
 
-	fmt.Println(username)
 	respondWithJSON(w, http.StatusOK, map[string]string{"username": username})
 	return
 }
