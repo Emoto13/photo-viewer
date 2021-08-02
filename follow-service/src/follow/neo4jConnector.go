@@ -40,7 +40,7 @@ func (n *neo4jConnector) SaveFollow(followerUsername, followingUsername string) 
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		_, err := tx.Run(`MATCH (follower:User), (following:User)
 						  WHERE follower.username = $followerUsername AND following.username = $followingUsername
-						  CREATE (follower)-[r:FOLLOWS]->(following)
+						  MERGE (follower)-[r:FOLLOWS]->(following)
 						  RETURN type(r);`,
 			map[string]interface{}{
 				"followerUsername":  followerUsername,
@@ -132,7 +132,7 @@ func (n *neo4jConnector) GetFollowings(username string) func(tx neo4j.Transactio
 func (n *neo4jConnector) GetSuggestions(username string) func(tx neo4j.Transaction) (interface{}, error) {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		records, err := tx.Run(`MATCH (n:User)-[r:FOLLOWS*2]->(m:User)
-								WHERE n.username = $username 
+								WHERE n.username = $username AND NOT (n)-[:FOLLOWS]->(m) and NOT m.username = $username
 								RETURN distinct m.username AS Suggestion
 								UNION
 								MATCH (n:User), (m:User)
