@@ -37,18 +37,15 @@ func NewFeedService(authClient auth.AuthClient,
 }
 
 func (s *feedService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Authorization header: ", r.Header.Get("Authorization"))
 	username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
 		fmt.Println("Couldn't authenticate", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Println("Username retrieved:", username)
 
 	cachedResult, err := s.postCacheStore.Get(context.Background(), username)
 	if err == nil {
-		fmt.Println("Cache me outside")
 		response, _ := json.Marshal(map[string][]*models.Post{"feed": cachedResult})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -74,7 +71,7 @@ func (s *feedService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) 
 func (s *feedService) UpdateFeed(w http.ResponseWriter, r *http.Request) {
 	username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println("Couldn't authenticate")
+		fmt.Println("couldn't authenticate", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -122,13 +119,6 @@ func (s *feedService) AddToFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *feedService) AddToFollowersFeed(w http.ResponseWriter, r *http.Request) {
-	/*username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
-	if err != nil {
-		fmt.Println("couldn't authenticate", err.Error())
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}*/
-
 	body, err := getPostRequestBody(r.Body)
 	if err != nil {
 		fmt.Println(err)
@@ -152,7 +142,7 @@ func (s *feedService) AddToFollowersFeed(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	fmt.Println("Post added to followers feed succssfully")
+	fmt.Println("Post added to followers feed successfully")
 	respondWithJSON(w, http.StatusOK, map[string]string{"Message": "Post added to followers feed succssfully"})
 }
 
