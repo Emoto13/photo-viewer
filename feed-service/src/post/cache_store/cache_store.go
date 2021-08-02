@@ -36,7 +36,7 @@ func (s *postCacheStore) Set(ctx context.Context, key string, value []*models.Po
 		Ctx:   ctx,
 		Key:   key,
 		Value: value,
-		TTL:   15 * time.Minute,
+		TTL:   3 * time.Minute,
 	})
 	if err != nil {
 		return err
