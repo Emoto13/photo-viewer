@@ -37,12 +37,14 @@ func NewFeedService(authClient auth.AuthClient,
 }
 
 func (s *feedService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Authorization header: ", r.Header.Get("Authorization"))
 	username, err := s.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println("Couldn't authenticate")
+		fmt.Println("Couldn't authenticate", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	fmt.Println("Username retrieved:", username)
 
 	cachedResult, err := s.postCacheStore.Get(context.Background(), username)
 	if err == nil {
@@ -56,7 +58,7 @@ func (s *feedService) GetFollowingPosts(w http.ResponseWriter, r *http.Request) 
 
 	feed, err := s.feedStore.GetFeed(username)
 	if err != nil {
-		fmt.Println("Couldn't get feed")
+		fmt.Println("Couldn't get feed", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}

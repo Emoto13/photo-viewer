@@ -47,7 +47,7 @@ func (s *feedStore) UpdateFeed(username string, followings []*models.Following) 
 		temp := []*postModels.Post{}
 		err := s.session.Query(`SELECT posts FROM posts WHERE username=?;`, following.Username).Scan(&temp)
 		if err != nil {
-			fmt.Println("could not execute select query", err.Error())
+			fmt.Println("could not execute select query: ", err.Error())
 			return err
 		}
 
