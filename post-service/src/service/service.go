@@ -10,7 +10,7 @@ import (
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/cache_store"
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/post_data"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/models"
 	"github.com/gorilla/mux"
 )
 
@@ -65,7 +65,7 @@ func (s *postService) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]*post_data.PostData{"posts": posts})
+	response, _ := json.Marshal(map[string][]*models.Post{"posts": posts})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -82,7 +82,7 @@ func (s *postService) SearchPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, _ := json.Marshal(map[string][]*post_data.PostData{"posts": posts})
+	response, _ := json.Marshal(map[string][]*models.Post{"posts": posts})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)

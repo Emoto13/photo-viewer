@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/post_data"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/models"
 )
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
@@ -22,13 +22,13 @@ func respondWithJSON(w http.ResponseWriter, code int, payload map[string]string)
 	w.Write(response)
 }
 
-func getRequestBody(requestBody io.ReadCloser) (*post_data.PostData, error) {
+func getRequestBody(requestBody io.ReadCloser) (*models.Post, error) {
 	bodyBytes, err := ioutil.ReadAll(requestBody)
 	if err != nil {
 		return nil, err
 	}
 
-	var result map[string]*post_data.PostData
+	var result map[string]*models.Post
 	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
 		return nil, err

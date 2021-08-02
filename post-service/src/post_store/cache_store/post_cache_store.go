@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/post_data"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/models"
 	"github.com/go-redis/cache/v8"
 )
 
 type PostCacheStore interface {
-	Set(ctx context.Context, key string, value []*post_data.PostData) error
-	Get(ctx context.Context, key string) ([]*post_data.PostData, error)
+	Set(ctx context.Context, key string, value []*models.Post) error
+	Get(ctx context.Context, key string) ([]*models.Post, error)
 }
 
 type postCacheStore struct {
@@ -21,8 +21,8 @@ func NewPostCacheStore(store *cache.Cache) PostCacheStore {
 	return &postCacheStore{store: store}
 }
 
-func (s *postCacheStore) Get(ctx context.Context, key string) ([]*post_data.PostData, error) {
-	var result []*post_data.PostData
+func (s *postCacheStore) Get(ctx context.Context, key string) ([]*models.Post, error) {
+	var result []*models.Post
 	err := s.store.Get(ctx, key, &result)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func (s *postCacheStore) Get(ctx context.Context, key string) ([]*post_data.Post
 	return result, nil
 }
 
-func (s *postCacheStore) Set(ctx context.Context, key string, value []*post_data.PostData) error {
+func (s *postCacheStore) Set(ctx context.Context, key string, value []*models.Post) error {
 	err := s.store.Set(&cache.Item{
 		Ctx:   ctx,
 		Key:   key,
