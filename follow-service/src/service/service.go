@@ -66,6 +66,13 @@ func (fs *followService) Follow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = fs.feedClient.UpdateFeed(r.Header.Get("Authorization"))
+	if err != nil {
+		fmt.Println("couldnt update feed", err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	fmt.Println(username, "followed", body["follow"])
 	respondWithJSON(w, http.StatusOK, map[string]string{"Message": fmt.Sprintf("You are now following %s", body["follow"])})
 	return
