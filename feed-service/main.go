@@ -45,7 +45,7 @@ func main() {
 		AllowCredentials: true,
 	})
 	handler := c.Handler(router)
-
+	registerService()
 	fmt.Println("Starting to listen at port:", serverPort)
 	http.ListenAndServe(serverPort, handler)
 }
@@ -69,7 +69,6 @@ func getRouter() *mux.Router {
 	router.HandleFunc("/feed-service/update-feed", feedService.UpdateFeed).Methods("PATCH")
 	router.HandleFunc("/feed-service/add-to-feed", feedService.AddToFeed).Methods("PATCH")
 	router.HandleFunc("/feed-service/add-to-followers-feed", feedService.AddToFollowersFeed).Methods("PATCH")
-
 	router.HandleFunc("/feed-service/health-check", feedService.HealthCheck).Methods("GET")
 	return router
 }
