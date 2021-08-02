@@ -1,19 +1,12 @@
 package tests
 
-import (
-	"testing"
-
-	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow"
-	"github.com/Emoto13/photo-viewer-rest/follow-service/src/follow/models"
-	"github.com/Emoto13/photo-viewer-rest/follow-service/tests/setup"
-)
-
 func assertEqualsError(a, b error, message string) {
 	if a != b {
 		panic(message)
 	}
 }
 
+/*
 func TestSaveFollow(t *testing.T) {
 	db, _ := setup.OpenPostgresDatabaseConnection()
 	db.Exec(setup.CreateUsersTable)
@@ -148,3 +141,4 @@ func TestGetSuggestions(t *testing.T) {
 	db.Exec(setup.DropUsersTable)
 	db.Exec(setup.DropFollowersTable)
 }
+*/
