@@ -152,7 +152,7 @@ func getAuthServiceAddress() string {
 		return fullHostname + ":10000"
 	}
 
-	fmt.Println(string(resp.Kvs[0].Value))
+	fmt.Println("found auth-service at: "string(resp.Kvs[0].Value))
 	return string(resp.Kvs[0].Value)
 }
 
@@ -183,6 +183,6 @@ func getFeedServiceAddress() string {
 		return fullHostname + ":10006"
 	}
 
-	fmt.Println(string(resp.Kvs[0].Value))
+	fmt.Println("found feed-service at: "string(resp.Kvs[0].Value))
 	return string(resp.Kvs[0].Value)
 }
