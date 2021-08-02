@@ -134,6 +134,8 @@ func registerService() {
 		fmt.Println("put failed, err:", err)
 		return
 	}
+
+	fmt.Println("feed-service registered at: ", fullHostname)
 }
 
 func getAuthServiceAddress() string {
