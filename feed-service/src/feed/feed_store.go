@@ -30,8 +30,9 @@ func NewFeedStore(postClient post.PostClient, session *gocql.Session) FeedStore 
 }
 
 func (s *feedStore) GetFeed(username string) ([]*postModels.Post, error) {
+	fmt.Println("user:", username)
 	res := []*postModels.Post{}
-	err := s.session.Query(`SELECT feed FROM feed WHERE username=?`, username).Scan(&res)
+	err := s.session.Query(`SELECT feed FROM feed WHERE username=?;`, username).Scan(&res)
 	if err != nil && err != gocql.ErrNotFound {
 		fmt.Println("error retrieving feed posts: ", err.Error())
 		return nil, err
@@ -44,7 +45,7 @@ func (s *feedStore) UpdateFeed(username string, followings []*models.Following) 
 	feed := []*postModels.Post{}
 	for _, following := range followings {
 		temp := []*postModels.Post{}
-		err := s.session.Query(`SELECT posts FROM posts WHERE username=?`, following.Username).Scan(&temp)
+		err := s.session.Query(`SELECT posts FROM posts WHERE username=?;`, following.Username).Scan(&temp)
 		if err != nil {
 			fmt.Println("could not execute select query", err.Error())
 			return err
