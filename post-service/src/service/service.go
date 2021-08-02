@@ -43,8 +43,7 @@ func (s *postService) CreatePost(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Println("Post recieved and ready to create:")
-	fmt.Println(post)
+	fmt.Println("Post recieved in CreatePost:", post)
 
 	err = s.postStore.CreatePost(username, post)
 	if err != nil {
