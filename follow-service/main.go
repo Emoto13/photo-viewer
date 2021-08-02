@@ -46,6 +46,7 @@ func main() {
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
 	})
+
 	handler := c.Handler(router)
 	registerService()
 	fmt.Println("Starting to listen at port", serverPort)
@@ -59,11 +60,11 @@ func getRouter() *mux.Router {
 		log.Fatalf("failed to open neo4j database connection: %v", err)
 	}
 
-	neo4jConnector := follow.NewNeo4jConnector()
-	followStore := follow.NewFollowStore(driver, neo4jConnector)
-
 	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
 	feedClient := feed.NewFeedClient(&http.Client{}, getFeedServiceAddress())
+
+	neo4jConnector := follow.NewNeo4jConnector()
+	followStore := follow.NewFollowStore(driver, neo4jConnector)
 
 	followService := service.NewFollowService(authClient, feedClient, followStore)
 
@@ -82,6 +83,7 @@ func getRouter() *mux.Router {
 func CreateNeo4jDriver() (neo4j.Driver, error) {
 	driver, err := neo4j.NewDriver(neo4jAddress, neo4j.BasicAuth(neo4jUsername, neo4jPassword, ""))
 	if err != nil {
+		fmt.Println("failed to create neo4j driver: ", err.Error())
 		return nil, err
 	}
 

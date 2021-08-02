@@ -41,6 +41,7 @@ func (store *followStore) CreateUser(username string) error {
 	query := store.connector.CreateUser(username)
 	_, err := session.WriteTransaction(query)
 	if err != nil {
+		fmt.Println("error creating follow user: ", err.Error())
 		return err
 	}
 
@@ -57,6 +58,7 @@ func (store *followStore) SaveFollow(follow models.Follow) error {
 	query := store.connector.SaveFollow(follow.GetUsername(), follow.GetFollowing())
 	_, err := session.WriteTransaction(query)
 	if err != nil {
+		fmt.Println("error saving follow to db: ", err.Error())
 		return err
 	}
 
@@ -73,6 +75,7 @@ func (store *followStore) RemoveFollow(follow models.Follow) error {
 	query := store.connector.RemoveFollow(follow.GetUsername(), follow.GetFollowing())
 	_, err := session.WriteTransaction(query)
 	if err != nil {
+		fmt.Println("error removing follow from db: ", err.Error())
 		return err
 	}
 
@@ -84,20 +87,16 @@ func (store *followStore) GetFollowers(username string) ([]*models.Follower, err
 	defer store.mu.RUnlock()
 
 	session := store.driver.NewSession(neo4j.SessionConfig{})
-	fmt.Println("Session opening finished")
-
 	defer session.Close()
 
 	query := store.connector.GetFollowers(username)
 	followers, err := session.ReadTransaction(query)
-	fmt.Println("Transaction not finished")
-
 	if err != nil {
+		fmt.Println("error querying for followers: ", err.Error())
 		fmt.Println(err.Error())
 		return nil, err
 	}
-	fmt.Println("Transaction finished")
-	fmt.Println(followers)
+
 	return followers.([]*models.Follower), nil
 }
 
@@ -111,7 +110,7 @@ func (store *followStore) GetFollowing(username string) ([]*models.Following, er
 	query := store.connector.GetFollowings(username)
 	followings, err := session.ReadTransaction(query)
 	if err != nil {
-		fmt.Println("error getting followings:", err)
+		fmt.Println("error querying for followings: ", err.Error())
 		return nil, err
 	}
 
@@ -128,6 +127,7 @@ func (store *followStore) GetSuggestions(username string) ([]*models.Suggestion,
 	query := store.connector.GetSuggestions(username)
 	suggestions, err := session.ReadTransaction(query)
 	if err != nil {
+		fmt.Println("error querying for suggestions: ", err.Error())
 		return nil, err
 	}
 

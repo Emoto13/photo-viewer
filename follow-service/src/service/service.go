@@ -81,7 +81,7 @@ func (fs *followService) Follow(w http.ResponseWriter, r *http.Request) {
 func (fs *followService) Unfollow(w http.ResponseWriter, r *http.Request) {
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("failed to authenticate: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -95,14 +95,14 @@ func (fs *followService) Unfollow(w http.ResponseWriter, r *http.Request) {
 
 	err = fs.followStore.RemoveFollow(models.NewFollow(username, body["unfollow"]))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("failed to remove follow: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	err = fs.feedClient.UpdateFeed(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println("couldnt update feed", err.Error())
+		fmt.Println("couldnt update feed: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -115,13 +115,14 @@ func (fs *followService) Unfollow(w http.ResponseWriter, r *http.Request) {
 func (fs *followService) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println("Wrong credentials")
+		fmt.Println("failed to authenticate: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	followers, err := fs.followStore.GetFollowers(username)
 	if err != nil {
+		fmt.Println("couldnt get followers: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -134,17 +135,16 @@ func (fs *followService) GetFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (fs *followService) GetFollowing(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Authorization: ", r.Header.Get("Authorization"))
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
-		fmt.Println("Couldn't auth")
+		fmt.Println("failed to authenticate: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	following, err := fs.followStore.GetFollowing(username)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("couldnt get following: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -159,12 +159,14 @@ func (fs *followService) GetFollowing(w http.ResponseWriter, r *http.Request) {
 func (fs *followService) GetSuggestions(w http.ResponseWriter, r *http.Request) {
 	username, err := fs.authClient.Authenticate(r.Header.Get("Authorization"))
 	if err != nil {
+		fmt.Println("failed to authenticate: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	suggestions, err := fs.followStore.GetSuggestions(username)
 	if err != nil {
+		fmt.Println("couldnt get suggestions: ", err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
