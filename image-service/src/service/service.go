@@ -70,6 +70,7 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 		Path:      path,
 		CreatedOn: time.Now(),
 	}
+	fmt.Println("Post to create", post)
 
 	err = s.feedClient.AddToFollowersFeed(r.Header.Get("Authorization"), post)
 	if err != nil {
