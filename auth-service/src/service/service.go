@@ -59,7 +59,7 @@ func (service *AuthServer) Login(w http.ResponseWriter, r *http.Request) {
 func (service *AuthServer) Logout(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		fmt.Println("empty authorization header", err.Error())
+		fmt.Println("empty authorization header")
 		respondWithError(w, http.StatusBadRequest, "Invalid authorization header")
 		return
 	}
