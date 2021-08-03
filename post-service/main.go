@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/service"
 	"github.com/gocql/gocql"
@@ -61,9 +62,10 @@ func getRouter() *mux.Router {
 	}
 
 	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
+	feedClient := feed.NewFeedClient(&http.Client{}, getFeedServiceAddress())
 
 	postStore := post_store.NewPostStore(db, session)
-	postService := service.New(authClient, postStore)
+	postService := service.New(authClient, feedClient, postStore)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
@@ -151,6 +153,37 @@ func getAuthServiceAddress() string {
 
 	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
 		return fullHostname + ":10000"
+	}
+
+	fmt.Println(string(resp.Kvs[0].Value))
+	return string(resp.Kvs[0].Value)
+}
+
+func getFeedServiceAddress() string {
+	config := clientv3.Config{
+		Endpoints:   []string{etcdAddress},
+		DialTimeout: 15 * time.Second,
+		Username:    etcdUsername,
+		Password:    etcdPassword,
+	}
+
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Println(err)
+		return fullHostname + ":10006"
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.Get(ctx, "feed-service")
+	cancel()
+	if err != nil {
+		fmt.Println("get failed err:", err)
+		return fullHostname + ":10006"
+	}
+
+	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
+		return fullHostname + ":10006"
 	}
 
 	fmt.Println(string(resp.Kvs[0].Value))

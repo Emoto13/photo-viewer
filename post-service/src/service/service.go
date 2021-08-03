@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
+	"github.com/Emoto13/photo-viewer-rest/post-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
-
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/models"
 	"github.com/gorilla/mux"
 )
@@ -15,12 +15,14 @@ import (
 type postService struct {
 	authClient auth.AuthClient
 	postStore  post_store.PostStore
+	feedClient feed.FeedClient
 }
 
-func New(authClient auth.AuthClient, postStore post_store.PostStore) *postService {
+func New(authClient auth.AuthClient, feedClient feed.FeedClient, postStore post_store.PostStore) *postService {
 	return &postService{
 		authClient: authClient,
 		postStore:  postStore,
+		feedClient: feedClient,
 	}
 }
 
@@ -44,8 +46,14 @@ func (s *postService) CreatePost(w http.ResponseWriter, r *http.Request) {
 	err = s.postStore.CreatePost(username, post)
 	if err != nil {
 		fmt.Println("couldnt write post to cassandra:", err.Error())
-		respondWithError(w, http.StatusBadRequest, err.Error())
+		respondWithError(w, http.StatusBadRequest, "Error creating post")
 		return
+	}
+
+	err = s.feedClient.AddToFollowersFeed(r.Header.Get("Authorization"), post)
+	if err != nil {
+		fmt.Println("failed to add to followers feed: ", err.Error())
+		respondWithError(w, http.StatusBadRequest, "Failed to add to followers feed")
 	}
 
 	fmt.Println("Post created successfully")
