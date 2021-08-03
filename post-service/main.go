@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/service"
 	"github.com/gocql/gocql"
@@ -62,10 +61,9 @@ func getRouter() *mux.Router {
 	}
 
 	authClient := auth.NewAuthClient(&http.Client{}, getAuthServiceAddress())
-	followClient := follow.NewFollowClient(&http.Client{}, getFollowServiceAddress())
 
 	postStore := post_store.NewPostStore(db, session)
-	postService := service.New(authClient, postStore, followClient)
+	postService := service.New(authClient, postStore)
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
@@ -73,7 +71,6 @@ func getRouter() *mux.Router {
 	router.HandleFunc("/post-service/create-post", postService.CreatePost).Methods("POST")
 	router.HandleFunc("/post-service/posts/{username}", postService.GetUserPosts).Methods("GET")
 	router.HandleFunc("/post-service/health-check", postService.HealthCheck).Methods("GET")
-
 	return router
 }
 
@@ -154,37 +151,6 @@ func getAuthServiceAddress() string {
 
 	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
 		return fullHostname + ":10000"
-	}
-
-	fmt.Println(string(resp.Kvs[0].Value))
-	return string(resp.Kvs[0].Value)
-}
-
-func getFollowServiceAddress() string {
-	config := clientv3.Config{
-		Endpoints:   []string{etcdAddress},
-		DialTimeout: 15 * time.Second,
-		Username:    etcdUsername,
-		Password:    etcdPassword,
-	}
-
-	client, err := clientv3.New(config)
-	if err != nil {
-		fmt.Println(err)
-		return fullHostname + ":10001"
-	}
-	defer client.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	resp, err := client.Get(ctx, "follow-service")
-	cancel()
-	if err != nil {
-		fmt.Println("get failed err:", err)
-		return fullHostname + ":10001"
-	}
-
-	if len(resp.Kvs) == 0 || resp.Kvs[0].Value == nil {
-		return fullHostname + ":10001"
 	}
 
 	fmt.Println(string(resp.Kvs[0].Value))

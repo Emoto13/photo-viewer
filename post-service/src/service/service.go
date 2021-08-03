@@ -6,26 +6,21 @@ import (
 	"net/http"
 
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/auth"
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/follow"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store"
 
-	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/cache_store"
 	"github.com/Emoto13/photo-viewer-rest/post-service/src/post_store/models"
 	"github.com/gorilla/mux"
 )
 
 type postService struct {
-	authClient   auth.AuthClient
-	postStore    post_store.PostStore
-	postCache    cache_store.PostCacheStore
-	followClient follow.FollowClient
+	authClient auth.AuthClient
+	postStore  post_store.PostStore
 }
 
-func New(authClient auth.AuthClient, postStore post_store.PostStore, followClient follow.FollowClient) *postService {
+func New(authClient auth.AuthClient, postStore post_store.PostStore) *postService {
 	return &postService{
-		authClient:   authClient,
-		followClient: followClient,
-		postStore:    postStore,
+		authClient: authClient,
+		postStore:  postStore,
 	}
 }
 
