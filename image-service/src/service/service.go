@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/auth"
-	"github.com/Emoto13/photo-viewer-rest/image-service/src/feed"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/image_store"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/image_store/image_data"
 	"github.com/Emoto13/photo-viewer-rest/image-service/src/post"
@@ -18,15 +17,13 @@ import (
 type imageService struct {
 	authClient auth.AuthClient
 	postClient post.PostClient
-	feedClient feed.FeedClient
 	imageStore image_store.ImageStore
 }
 
-func New(authClient auth.AuthClient, postClient post.PostClient, feedClient feed.FeedClient, imageStore image_store.ImageStore) *imageService {
+func New(authClient auth.AuthClient, postClient post.PostClient, imageStore image_store.ImageStore) *imageService {
 	return &imageService{
 		authClient: authClient,
 		imageStore: imageStore,
-		feedClient: feedClient,
 		postClient: postClient,
 	}
 }
@@ -71,12 +68,6 @@ func (s *imageService) UploadImage(w http.ResponseWriter, r *http.Request) {
 		CreatedOn: time.Now(),
 	}
 	fmt.Println("Post to create", post)
-
-	err = s.feedClient.AddToFollowersFeed(r.Header.Get("Authorization"), post)
-	if err != nil {
-		fmt.Println("failed to add to followers feed: ", err.Error())
-		respondWithError(w, http.StatusBadRequest, err.Error())
-	}
 
 	err = s.postClient.CreatePost(r.Header.Get("Authorization"), post)
 	if err != nil {
